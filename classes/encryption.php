@@ -5,6 +5,15 @@
    */
   class Encryption {
 
+    const ALGORITHIM     = MCRYPT_RIJNDAEL_256;
+    const MODE           = MCRYPT_MODE_CBC;
+    const ALGORITHIM_STR = 'rijndael-256';
+    const MODE_STR       = 'cbc';
+    const IV_SIZE        = 32;
+    const KEY_SIZE       = 32;
+    const RANDOM_SOURCE  = MCRYPT_DEV_URANDOM;
+    const PBKDF2_HASH    = 'sha256';
+
     /**
      * Checks that MCrypt is installed and the correct algorithm is available.
      */
@@ -12,7 +21,7 @@
       if( ! function_exists( 'mcrypt_encrypt' ) or ! function_exists( 'mcrypt_decrypt' ) ) {
         throw new Exception( 'MCrypt not installed.' );
       }
-      if( ! in_array( 'rijndael-256', mcrypt_list_algorithms() ) or ! in_array( 'cbc', mcrypt_list_modes() ) ) {
+      if( ! in_array( self::ALGORITHIM_STR, mcrypt_list_algorithms() ) or ! in_array( self::MODE_STR, mcrypt_list_modes() ) ) {
         throw new Exception( 'Cipher not supported.' );
       }
     }
@@ -36,7 +45,7 @@
       $rounds = (int) $rounds;
       if( $rounds < 1000 ) { $rounds = 1000; }
 
-      return self::pbkdf2($password, $salt, $rounds, 32, 'sha256');
+      return self::pbkdf2($password, $salt, $rounds, self::KEY_SIZE, self::PBKDF2_HASH);
     }
 
     /**
@@ -44,28 +53,28 @@
      */
     public static function sanity_check () {
       self::check_mcrypt();
-      return mcrypt_module_self_test(MCRYPT_RIJNDAEL_256);
+      return mcrypt_module_self_test(self::ALGORITHIM);
     }
 
     /**
      * Encrypt a some data.
+     *
+     * \return A string, with the IV appended to the front of the encrypted data.
      */
     public static function encrypt ( $plaintext, $password = null ) {
       self::check_mcrypt();
-      $iv_size = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC );
-      $iv = mcrypt_create_iv( $iv_size, MCRYPT_DEV_URANDOM );
-      return array(
-        'data' => mcrypt_encrypt( MCRYPT_RIJNDAEL_256, self::get_key( $password ), $plaintext, MCRYPT_MODE_CBC, $iv ),
-        'iv'   => $iv
-      );
+      $iv_size = mcrypt_get_iv_size( self::ALGORITHIM, self::MODE );
+      $iv = mcrypt_create_iv( $iv_size, self::RANDOM_SOURCE );
+      return $iv . mcrypt_encrypt( self::ALGORITHIM, self::get_key( $password ), $plaintext, self::MODE, $iv );
     }
 
     /**
      * Decrypt some data.
      */
-    public static function decrypt ( $ciphertext, $iv, $password = null ) {
+    public static function decrypt ( $data, $password = null ) {
       self::check_mcrypt();
-      return mcrypt_decrypt( MCRYPT_RIJNDAEL_256, self::get_key( $password ), $ciphertext, MCRYPT_MODE_CBC, $iv );
+      list( $iv, $ciphertext ) = str_split( $data, self::IV_SIZE );
+      return mcrypt_decrypt( self::ALGORITHIM, self::get_key( $password ), $ciphertext, self::MODE, $iv );
     }
 
     /**
