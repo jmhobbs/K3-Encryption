@@ -31,8 +31,8 @@
      */
     protected static function get_key ( $password = null ) {
       if( is_null( $password ) ) {
-        $password = Kohana::$config->load( 'encryption.key', null );
-        if( is_null( $password ) ) { throw new Exception( 'Config value encryption.key is not set.' ); }
+        $password = Kohana::$config->load( 'encryption.password', null );
+        if( is_null( $password ) ) { throw new Exception( 'Config value encryption.password is not set.' ); }
       }
 
       $salt = Kohana::$config->load( 'encryption.pbkdf2.salt', null );
@@ -74,7 +74,7 @@
     public static function decrypt ( $data, $password = null ) {
       self::check_mcrypt();
       list( $iv, $ciphertext ) = str_split( $data, self::IV_SIZE );
-      return mcrypt_decrypt( self::ALGORITHIM, self::get_key( $password ), $ciphertext, self::MODE, $iv );
+      return rtrim( mcrypt_decrypt( self::ALGORITHIM, self::get_key( $password ), $ciphertext, self::MODE, $iv ), "\0" );
     }
 
     /**
